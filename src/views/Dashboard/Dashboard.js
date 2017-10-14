@@ -22,6 +22,8 @@ import {
   Input,
   Table
 } from "reactstrap";
+import { database } from 'firebase';
+import moment from 'moment'
 
 const brandPrimary = '#20a8d8';
 const brandSuccess = '#4dbd74';
@@ -341,44 +343,41 @@ function random(min, max) {
 var elements = 27;
 var data1 = [];
 var data2 = [];
-var data3 = [];
 
 for (var i = 0; i <= elements; i++) {
   data1.push(random(50, 200));
   data2.push(random(80, 100));
-  data3.push(65);
 }
 
-const mainChart = {
-  labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S', 'M', 'T', 'W', 'T', 'F', 'S', 'S', 'M', 'T', 'W', 'T', 'F', 'S', 'S', 'M', 'T', 'W', 'T', 'F', 'S', 'S'],
+const dailyLabel = ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
+const weeklyLabel = [
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+];
+const monthlyLabel = [
+  'Week 1', 'Week 2', 'Week 3', 'Week 4'
+];
+
+const initChartData = (addTokenActivities, removeTokenActivities) => ({
+  labels: dailyLabel,
   datasets: [
     {
-      label: 'My First dataset',
+      label: 'Add tokens',
       backgroundColor: convertHex(brandInfo, 10),
       borderColor: brandInfo,
       pointHoverBackgroundColor: '#fff',
       borderWidth: 2,
-      data: data1
+      data: addTokenActivities
     },
     {
-      label: 'My Second dataset',
+      label: 'Remove tokens',
       backgroundColor: 'transparent',
       borderColor: brandSuccess,
       pointHoverBackgroundColor: '#fff',
       borderWidth: 2,
-      data: data2
-    },
-    {
-      label: 'My Third dataset',
-      backgroundColor: 'transparent',
-      borderColor: brandDanger,
-      pointHoverBackgroundColor: '#fff',
-      borderWidth: 1,
-      borderDash: [8, 5],
-      data: data3
+      data: removeTokenActivities
     }
   ]
-}
+})
 
 const mainChartOpts = {
   maintainAspectRatio: false,
@@ -395,8 +394,8 @@ const mainChartOpts = {
       ticks: {
         beginAtZero: true,
         maxTicksLimit: 5,
-        stepSize: Math.ceil(250 / 5),
-        max: 250
+        // stepSize: Math.ceil(250 / 5),
+        // max: 20
       }
     }]
   },
@@ -416,9 +415,53 @@ class Dashboard extends Component {
     super(props);
 
     this.toggle = this.toggle.bind(this);
+    this.toggle = this.renderFilterType.bind(this);
+    this.onTokenHistoryChanged = this.onTokenHistoryChanged.bind(this);
+
+    this.addTokenActivities = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    this.removeTokenActivities = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    this.filterType = ['Day', 'Week', 'Month']
     this.state = {
-      dropdownOpen: false
+      dropdownOpen: false,
+      filterType: 'Day'
     };
+  }
+
+  componentWillMount() {
+    database().ref('tokenHistory').on('value', this.onTokenHistoryChanged);
+  }
+
+  componentWillUnmount() {
+    database().ref('tokenHistory').off('value', this.onTokenHistoryChanged);
+  }
+
+  componentDidMount() {
+    console.log(this.addTokenActivities)
+    console.log(this.removeTokenActivities)
+  }
+
+  onTokenHistoryChanged(parentSnapshot) {
+    parentSnapshot.forEach((parent) => {
+      const { filterType } = this.state;
+      const condition = filterType === 'Day' ? 'd' : filterType === 'Week' ? 'w' : 'M';
+
+      const startAt = moment().startOf(condition).format('x') * 1;
+      const endAt = moment().endOf(condition).format('x') * 1;
+
+      parent.ref.orderByChild('timeStamp').startAt(startAt).endAt(endAt).once('value')
+        .then((child) => {
+          child.forEach((snap) => {
+            const { type, timeStamp } = snap.val();
+            const { addTokenActivities, removeTokenActivities } = this;
+            const format = moment(timeStamp).format('HH:00');
+            const index = dailyLabel.indexOf(format);
+            const activies = (type === 'add' ? addTokenActivities : removeTokenActivities);
+            activies[index] = (activies[index] || 0) + 1;
+            this.forceUpdate();
+          });
+        });
+    });
   }
 
   toggle() {
@@ -427,6 +470,19 @@ class Dashboard extends Component {
     });
   }
 
+  renderFilterType() {
+    return (
+      <ButtonGroup className="mr-3" data-toggle="buttons" aria-label="First group">
+        {
+          this.filterType.map(type => (
+            <Label htmlFor={type} className={`btn btn-outline-secondary ${type === this.state.filterType && 'active'}`} key={type}>
+              <Input type="radio" name={type} id={type} onClick={() => { this.setState({ filterType: type }) }} />{type}
+            </Label>
+          ))
+        }
+      </ButtonGroup>
+    )
+  }
 
   render() {
 
@@ -539,6 +595,7 @@ class Dashboard extends Component {
         <Row>
           <Col>
             <Card>
+
               <CardBlock className="card-body">
                 <Row>
                   <Col sm="5">
@@ -546,55 +603,50 @@ class Dashboard extends Component {
                     <div className="small text-muted">November 2015</div>
                   </Col>
                   <Col sm="7" className="d-none d-sm-inline-block">
-                    <Button color="primary" className="float-right"><i className="icon-cloud-download"></i></Button>
+                    {
+                      // <Button color="primary" className="float-right"><i className="icon-cloud-download"></i></Button>
+                    }
                     <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
-                      <ButtonGroup className="mr-3" data-toggle="buttons" aria-label="First group">
-                        <Label htmlFor="option1" className="btn btn-outline-secondary">
-                          <Input type="radio" name="options" id="option1" /> Day
-                        </Label>
-                        <Label htmlFor="option2" className="btn btn-outline-secondary active">
-                          <Input type="radio" name="options" id="option2" defaultChecked /> Month
-                        </Label>
-                        <Label htmlFor="option3" className="btn btn-outline-secondary">
-                          <Input type="radio" name="options" id="option3" /> Year
-                        </Label>
-                      </ButtonGroup>
+                      {this.renderFilterType()}
                     </ButtonToolbar>
                   </Col>
                 </Row>
                 <div className="chart-wrapper" style={{ height: 300 + 'px', marginTop: 40 + 'px' }}>
-                  <Line data={mainChart} options={mainChartOpts} height={300} />
+                  <Line data={initChartData(this.addTokenActivities, this.removeTokenActivities)} options={mainChartOpts} height={300} />
                 </div>
               </CardBlock>
-              <CardFooter>
-                <ul>
-                  <li>
-                    <div className="text-muted">Visits</div>
-                    <strong>29.703 Users (40%)</strong>
-                    <Progress className="progress-xs mt-2" color="success" value="40" />
-                  </li>
-                  <li className="d-none d-md-table-cell">
-                    <div className="text-muted">Unique</div>
-                    <strong>24.093 Users (20%)</strong>
-                    <Progress className="progress-xs mt-2" color="info" value="20" />
-                  </li>
-                  <li>
-                    <div className="text-muted">Pageviews</div>
-                    <strong>78.706 Views (60%)</strong>
-                    <Progress className="progress-xs mt-2" color="warning" value="60" />
-                  </li>
-                  <li className="d-none d-md-table-cell">
-                    <div className="text-muted">New Users</div>
-                    <strong>22.123 Users (80%)</strong>
-                    <Progress className="progress-xs mt-2" color="danger" value="80" />
-                  </li>
-                  <li className="d-none d-md-table-cell">
-                    <div className="text-muted">Bounce Rate</div>
-                    <strong>Average 40.15%</strong>
-                    <Progress className="progress-xs mt-2" color="primary" value="40" />
-                  </li>
-                </ul>
-              </CardFooter>
+
+              {
+                // <CardFooter>
+                //   <ul>
+                //     <li>
+                //       <div className="text-muted">Visits</div>
+                //       <strong>29.703 Users (40%)</strong>
+                //       <Progress className="progress-xs mt-2" color="success" value="40" />
+                //     </li>
+                //     <li className="d-none d-md-table-cell">
+                //       <div className="text-muted">Unique</div>
+                //       <strong>24.093 Users (20%)</strong>
+                //       <Progress className="progress-xs mt-2" color="info" value="20" />
+                //     </li>
+                //     <li>
+                //       <div className="text-muted">Pageviews</div>
+                //       <strong>78.706 Views (60%)</strong>
+                //       <Progress className="progress-xs mt-2" color="warning" value="60" />
+                //     </li>
+                //     <li className="d-none d-md-table-cell">
+                //       <div className="text-muted">New Users</div>
+                //       <strong>22.123 Users (80%)</strong>
+                //       <Progress className="progress-xs mt-2" color="danger" value="80" />
+                //     </li>
+                //     <li className="d-none d-md-table-cell">
+                //       <div className="text-muted">Bounce Rate</div>
+                //       <strong>Average 40.15%</strong>
+                //       <Progress className="progress-xs mt-2" color="primary" value="40" />
+                //     </li>
+                //   </ul>
+                // </CardFooter>
+              }
             </Card>
           </Col>
         </Row>

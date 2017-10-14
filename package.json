@@ -29,8 +29,10 @@
   "dependencies": {
     "bootstrap": "^4.0.0-beta",
     "chart.js": "2.6.0",
+    "firebase": "^4.5.1",
     "font-awesome": "^4.7.0",
     "history": "4.7.2",
+    "moment": "^2.19.1",
     "react": "^15.6.1",
     "react-chartjs-2": "2.6.1",
     "react-dom": "^15.6.1",
