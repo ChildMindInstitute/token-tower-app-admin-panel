@@ -1,250 +1,187 @@
-import React, {Component} from "react";
-import {Bar, Doughnut, Line, Pie, Polar, Radar} from "react-chartjs-2";
-import {CardColumns, Card, CardHeader, CardBlock} from "reactstrap";
-
-const line = {
-  labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-  datasets: [
-    {
-      label: 'My First dataset',
-      fill: false,
-      lineTension: 0.1,
-      backgroundColor: 'rgba(75,192,192,0.4)',
-      borderColor: 'rgba(75,192,192,1)',
-      borderCapStyle: 'butt',
-      borderDash: [],
-      borderDashOffset: 0.0,
-      borderJoinStyle: 'miter',
-      pointBorderColor: 'rgba(75,192,192,1)',
-      pointBackgroundColor: '#fff',
-      pointBorderWidth: 1,
-      pointHoverRadius: 5,
-      pointHoverBackgroundColor: 'rgba(75,192,192,1)',
-      pointHoverBorderColor: 'rgba(220,220,220,1)',
-      pointHoverBorderWidth: 2,
-      pointRadius: 1,
-      pointHitRadius: 10,
-      data: [65, 59, 80, 81, 56, 55, 40]
-    }
-  ]
-};
-
-const bar = {
-  labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-  datasets: [
-    {
-      label: 'My First dataset',
-      backgroundColor: 'rgba(255,99,132,0.2)',
-      borderColor: 'rgba(255,99,132,1)',
-      borderWidth: 1,
-      hoverBackgroundColor: 'rgba(255,99,132,0.4)',
-      hoverBorderColor: 'rgba(255,99,132,1)',
-      data: [65, 59, 80, 81, 56, 55, 40]
-    }
-  ]
-};
-
-const doughnut = {
-  labels: [
-    'Red',
-    'Green',
-    'Yellow'
-  ],
-  datasets: [{
-    data: [300, 50, 100],
-    backgroundColor: [
-      '#FF6384',
-      '#36A2EB',
-      '#FFCE56'
-    ],
-    hoverBackgroundColor: [
-      '#FF6384',
-      '#36A2EB',
-      '#FFCE56'
-    ]
-  }]
-};
-
-const radar = {
-  labels: ['Eating', 'Drinking', 'Sleeping', 'Designing', 'Coding', 'Cycling', 'Running'],
-  datasets: [
-    {
-      label: 'My First dataset',
-      backgroundColor: 'rgba(179,181,198,0.2)',
-      borderColor: 'rgba(179,181,198,1)',
-      pointBackgroundColor: 'rgba(179,181,198,1)',
-      pointBorderColor: '#fff',
-      pointHoverBackgroundColor: '#fff',
-      pointHoverBorderColor: 'rgba(179,181,198,1)',
-      data: [65, 59, 90, 81, 56, 55, 40]
-    },
-    {
-      label: 'My Second dataset',
-      backgroundColor: 'rgba(255,99,132,0.2)',
-      borderColor: 'rgba(255,99,132,1)',
-      pointBackgroundColor: 'rgba(255,99,132,1)',
-      pointBorderColor: '#fff',
-      pointHoverBackgroundColor: '#fff',
-      pointHoverBorderColor: 'rgba(255,99,132,1)',
-      data: [28, 48, 40, 19, 96, 27, 100]
-    }
-  ]
-};
-
-const pie = {
-  labels: [
-    'Red',
-    'Green',
-    'Yellow'
-  ],
-  datasets: [{
-    data: [300, 50, 100],
-    backgroundColor: [
-      '#FF6384',
-      '#36A2EB',
-      '#FFCE56'
-    ],
-    hoverBackgroundColor: [
-      '#FF6384',
-      '#36A2EB',
-      '#FFCE56'
-    ]
-  }]
-};
-
-const polar = {
-  datasets: [{
-    data: [
-      11,
-      16,
-      7,
-      3,
-      14
-    ],
-    backgroundColor: [
-      '#FF6384',
-      '#4BC0C0',
-      '#FFCE56',
-      '#E7E9ED',
-      '#36A2EB'
-    ],
-    label: 'My dataset' // for legend
-  }],
-  labels: [
-    'Red',
-    'Green',
-    'Yellow',
-    'Grey',
-    'Blue'
-  ]
-};
+import React, { Component } from "react";
+import { Bar, Line } from "react-chartjs-2";
+import {
+  Row,
+  Col,
+  Progress,
+  Card,
+  CardBlock,
+  CardFooter,
+  CardTitle,
+  ButtonToolbar,
+  ButtonGroup,
+  Label,
+  Input,
+} from "reactstrap";
+import { database } from 'firebase';
+import moment from 'moment'
+import {
+  brandDanger, brandInfo, convertHex, dailyLabel, initChartData, mainChartOpts, monthlyLabel, weeklyLabel
+} from '../../utils';
 
 class Charts extends Component {
+  constructor(props) {
+    super(props);
+
+    this.renderFilterType = this.renderFilterType.bind(this);
+    this.onTokenHistoryChanged = this.onTokenHistoryChanged.bind(this);
+    this.onUserChanged = this.onUserChanged.bind(this);
+    this.getChartData = this.getChartData.bind(this);
+    this.getChartItemIndex = this.getChartItemIndex.bind(this);
+    this.onFilterClick = this.onFilterClick.bind(this);
+    this.getTotalAddToken = this.getTotalAddToken.bind(this);
+    this.getTotalRemoveToken = this.getTotalRemoveToken.bind(this);
+    this.getTotalTokenEarned = this.getTotalTokenEarned.bind(this);
+
+    this.addTokenActivities = [];
+    this.removeTokenActivities = [];
+    this.tokensEarnedAverage = [];
+
+    this.filterTypes = ['Day', 'Week', 'Month']
+    this.state = { filterType: 'Day' };
+  }
+
+  componentWillMount() {
+    const { match: { params: { id } } } = this.props;
+    database().ref(`tokenHistory/${id}`).on('value', this.onTokenHistoryChanged);
+    database().ref(`users/${id}`).on('value', this.onUserChanged);
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.filterType !== prevState.filterType) {
+      const { match: { params: { id } } } = this.props;
+      database().ref(`tokenHistory/${id}`).once('value', this.onTokenHistoryChanged);
+    }
+  }
+
+  componentWillUnmount() {
+    const { match: { params: { id } } } = this.props;
+    database().ref(`tokenHistory/${id}`).off('value', this.onTokenHistoryChanged);
+    database().ref(`users/${id}`).off('value', this.onUserChanged);
+  }
+
+  onUserChanged(childSnapshot) {
+    const { displayName } = childSnapshot.val();
+    this.setState({ displayName })
+  }
+
+  getChartData() {
+    const { state: { filterType }, addTokenActivities, removeTokenActivities, tokensEarnedAverage } = this;
+
+    return initChartData(
+      [...addTokenActivities],
+      [...removeTokenActivities],
+      [...tokensEarnedAverage],
+      filterType === 'Day' ? dailyLabel : filterType === 'Week' ? weeklyLabel : monthlyLabel
+    );
+  }
+
+  getChartItemIndex(timeStamp) {
+    const { filterType } = this.state;
+    const format = moment(timeStamp).format(filterType === 'Day' ? 'HH:00' : filterType === 'Week' ? 'dddd' : 'DD');
+    return (filterType === 'Day' ? dailyLabel : filterType === 'Week' ? weeklyLabel : monthlyLabel).indexOf(format);
+  }
+
+  onFilterClick(type) {
+    this.setState({ filterType: type });
+  }
+
+  getTotalAddToken() {
+    return this.addTokenActivities.length > 0 && this.addTokenActivities.reduce((a, b) => a + b);
+  }
+
+  getTotalRemoveToken() {
+    return this.removeTokenActivities.length > 0 && this.removeTokenActivities.reduce((a, b) => a + b);
+  }
+
+  getTotalTokenEarned() {
+    return this.getTotalAddToken() - this.getTotalRemoveToken();
+  }
+
+  onTokenHistoryChanged(snapshot) {
+    this.addTokenActivities = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    this.removeTokenActivities = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    this.tokensEarnedAverage = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    const { state: { filterType }, addTokenActivities, removeTokenActivities, getChartItemIndex, tokensEarnedAverage } = this;
+    const condition = filterType === 'Day' ? 'd' : filterType === 'Week' ? 'w' : 'M';
+    const startAt = moment().startOf(condition).format('x') * 1;
+    const endAt = moment().endOf(condition).format('x') * 1;
+
+    snapshot.ref.orderByChild('timeStamp').startAt(startAt).endAt(endAt).once('value')
+      .then((child) => {
+        child.forEach((snap) => {
+          const { type, timeStamp } = snap.val();
+          const index = getChartItemIndex(timeStamp);
+          const activies = (type === 'add' ? addTokenActivities : removeTokenActivities);
+          activies[index] += 1;
+          tokensEarnedAverage[index] = addTokenActivities[index] - removeTokenActivities[index];
+        });
+      })
+      .then(() => { this.forceUpdate() });
+  }
+
+  renderFilterType() {
+    const { filterTypes, state: { filterType } } = this;
+
+    return (
+      <ButtonGroup className="mr-3" data-toggle="buttons" aria-label="First group">
+        {
+          filterTypes.map(type => (
+            <Label htmlFor={type} className={`btn btn-outline-secondary ${type === filterType && 'active'}`} key={type}>
+              <Input type="radio" name={type} id={type} onClick={() => { this.onFilterClick(type); }} />{type}
+            </Label>
+          ))
+        }
+      </ButtonGroup>
+    )
+  }
   render() {
     return (
       <div className="animated fadeIn">
-        <CardColumns className="cols-2">
-          <Card>
-            <CardHeader>
-              Line Chart
-              <div className="card-actions">
-                <a href="http://www.chartjs.org">
-                  <small className="text-muted">docs</small>
-                </a>
-              </div>
-            </CardHeader>
-            <CardBlock className="card-body">
-              <div className="chart-wrapper">
-                <Line data={line}
-                      options={{
-                    maintainAspectRatio: false
-                  }}
-                />
-              </div>
-            </CardBlock>
-          </Card>
-          <Card>
-            <CardHeader>
-              Bar Chart
-              <div className="card-actions">
-                <a href="http://www.chartjs.org">
-                  <small className="text-muted">docs</small>
-                </a>
-              </div>
-            </CardHeader>
-            <CardBlock className="card-body">
-              <div className="chart-wrapper">
-                <Bar data={bar}
-                     options={{
-                  maintainAspectRatio: false
-                }}
-                />
-              </div>
-            </CardBlock>
-          </Card>
-          <Card>
-            <CardHeader>
-              Doughnut Chart
-              <div className="card-actions">
-                <a href="http://www.chartjs.org">
-                  <small className="text-muted">docs</small>
-                </a>
-              </div>
-            </CardHeader>
-            <CardBlock className="card-body">
-              <div className="chart-wrapper">
-                <Doughnut data={doughnut}/>
-              </div>
-            </CardBlock>
-          </Card>
-          <Card>
-            <CardHeader>
-              Radar Chart
-              <div className="card-actions">
-                <a href="http://www.chartjs.org">
-                  <small className="text-muted">docs</small>
-                </a>
-              </div>
-            </CardHeader>
-            <CardBlock className="card-body">
-              <div className="chart-wrapper">
-                <Radar data={radar}/>
-              </div>
-            </CardBlock>
-          </Card>
-          <Card>
-            <CardHeader>
-              Pie Chart
-              <div className="card-actions">
-                <a href="http://www.chartjs.org">
-                  <small className="text-muted">docs</small>
-                </a>
-              </div>
-            </CardHeader>
-            <CardBlock className="card-body">
-              <div className="chart-wrapper">
-                <Pie data={pie}/>
-              </div>
-            </CardBlock>
-          </Card>
-          <Card>
-            <CardHeader>
-              Polar Area Chart
-              <div className="card-actions">
-                <a href="http://www.chartjs.org">
-                  <small className="text-muted">docs</small>
-                </a>
-              </div>
-            </CardHeader>
-            <CardBlock className="card-body">
-              <div className="chart-wrapper">
-                <Polar data={polar}/>
-              </div>
-            </CardBlock>
-          </Card>
-        </CardColumns>
+        <Row>
+          <Col>
+            <Card>
+              <CardBlock className="card-body">
+                <Row>
+                  <Col sm="5">
+                    <CardTitle className="mb-0">{this.state.displayName}'s activies</CardTitle>
+                    <div className="small text-muted">{moment().format('MMMM Do YYYY')}</div>
+                  </Col>
+                  <Col sm="7" className="d-none d-sm-inline-block">
+                    <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
+                      {this.renderFilterType()}
+                    </ButtonToolbar>
+                  </Col>
+                </Row>
+                <div className="chart-wrapper" style={{ height: 300 + 'px', marginTop: 40 + 'px' }}>
+                  <Line data={this.getChartData()} options={mainChartOpts} height={300} />
+                </div>
+              </CardBlock>
+              <CardFooter>
+                <ul>
+                  <li>
+                    <div className="text-muted">Total tokens added</div>
+                    <strong>{this.getTotalAddToken()} times</strong>
+                    <Progress className="progress-xs mt-2" color="info" value="100" />
+                  </li>
+                  <li className="d-none d-md-table-cell">
+                    <div className="text-muted">Total tokens removed</div>
+                    <strong>{this.getTotalRemoveToken()} times</strong>
+                    <Progress className="progress-xs mt-2" color="danger" value="100" />
+                  </li>
+                  <li className="d-none d-md-table-cell">
+                    <div className="text-muted">Total tokens earned</div>
+                    <strong>{this.getTotalTokenEarned()} Tokens</strong>
+                    <Progress className="progress-xs mt-2" color="success" value="100" />
+                  </li>
+                </ul>
+              </CardFooter>
+            </Card>
+          </Col>
+        </Row>
       </div>
-    )
+    );
   }
 }
 

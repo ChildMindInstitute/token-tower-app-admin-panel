@@ -61,16 +61,18 @@ class Header extends Component {
         </Nav>
         <Nav className="ml-auto" navbar>
           <NavItem>
-            <Dropdown isOpen={this.state.dropdownOpen} toggle={this.toggle}>
-              <DropdownToggle className="nav-link dropdown-toggle">
-                <img src={'img/avatars/6.jpg'} className="img-avatar" alt="admin@bootstrapmaster.com" />
-                <span className="d-md-down-none">admin</span>
-              </DropdownToggle>
-              <DropdownMenu right className={this.state.dropdownOpen ? 'show' : ''}>
-                <DropdownItem divider />
-                <DropdownItem><i className="fa fa-lock"></i> Logout</DropdownItem>
-              </DropdownMenu>
-            </Dropdown>
+            {
+              // <Dropdown isOpen={this.state.dropdownOpen} toggle={this.toggle}>
+              //   <DropdownToggle className="nav-link dropdown-toggle">
+              //     <img src={'img/avatars/6.jpg'} className="img-avatar" alt="admin@bootstrapmaster.com" />
+              //     <span className="d-md-down-none">admin</span>
+              //   </DropdownToggle>
+              //   <DropdownMenu right className={this.state.dropdownOpen ? 'show' : ''}>
+              //     <DropdownItem divider />
+              //     <DropdownItem><i className="fa fa-lock"></i> Logout</DropdownItem>
+              //   </DropdownMenu>
+              // </Dropdown>
+            }
           </NavItem>
         </Nav>
       </header>

@@ -1,4 +1,4 @@
-import React, {Component} from "react";
+import React, { Component } from "react";
 import {
   Badge,
   Row,
@@ -11,151 +11,84 @@ import {
   PaginationItem,
   PaginationLink
 } from "reactstrap";
+import { database } from 'firebase';
 
 
 class Tables extends Component {
+  constructor() {
+    super();
+    this.onUserChange = this.onUserChange.bind(this);
+    this.renderUserRow = this.renderUserRow.bind(this);
+
+    this.users = [];
+  }
+
+  componentWillMount() {
+    database().ref('users').on('value', this.onUserChange)
+  }
+
+  componentWillUnmount() {
+    database().ref('users').off('value', this.onUserChange)
+  }
+
+  onUserChange(snapshot) {
+    this.users = [];
+    snapshot.forEach((childSnapshot) => {
+      const { uid, email, displayName, child = {}, parent = {} } = childSnapshot.val();
+      const { tokensEarned: childTokensEarned = 0, name: childName } = child;
+      const { tokensEarned: parentTokensEarned = 0 } = parent;
+
+      database().ref(`tokenStack/${uid}`).once('value').then((snap) => {
+        const { tokens = [] } = snap.val() || {};
+
+        this.users.push({
+          uid,
+          email,
+          displayName,
+          childName: childName || 'Don\'t set child name yet',
+          tokensEarned: (childName ? childTokensEarned : parentTokensEarned) + tokens.length
+        });
+      })
+      .then(() => this.forceUpdate())
+    });
+  }
+
+  renderUserRow() {
+    return (
+      this.users.map(({ uid, email, displayName, childName, tokensEarned }) => (
+        <tr key={uid}>
+          <td><a href={`#user/${uid}`}>View</a></td>
+          <td>{email}</td>
+          <td>{displayName}</td>
+          <td>{childName}</td>
+          <td>{tokensEarned}</td>
+        </tr>
+      ))
+    );
+  }
+
   render() {
     return (
       <div className="animated fadeIn">
         <Row>
-          <Col xs="12" lg="6">
+          <Col xs="12" lg="12">
             <Card>
               <CardHeader>
-                <i className="fa fa-align-justify"></i> Simple Table
-              </CardHeader>
-              <CardBlock className="card-body">
-                <Table responsive>
-                  <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Date registered</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr>
-                    <td>Samppa Nori</td>
-                    <td>2012/01/01</td>
-                    <td>Member</td>
-                    <td>
-                      <Badge color="success">Active</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Estavan Lykos</td>
-                    <td>2012/02/01</td>
-                    <td>Staff</td>
-                    <td>
-                      <Badge color="danger">Banned</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Chetan Mohamed</td>
-                    <td>2012/02/01</td>
-                    <td>Admin</td>
-                    <td>
-                      <Badge color="secondary">Inactive</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Derick Maximinus</td>
-                    <td>2012/03/01</td>
-                    <td>Member</td>
-                    <td>
-                      <Badge color="warning">Pending</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Friderik Dávid</td>
-                    <td>2012/01/21</td>
-                    <td>Staff</td>
-                    <td>
-                      <Badge color="success">Active</Badge>
-                    </td>
-                  </tr>
-                  </tbody>
-                </Table>
-                <Pagination>
-                  <PaginationItem>
-                    <PaginationLink previous href="#"></PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem active>
-                    <PaginationLink href="#">1</PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationLink href="#">2</PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationLink href="#">3</PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationLink href="#">4</PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationLink next href="#"></PaginationLink>
-                  </PaginationItem>
-                </Pagination>
-              </CardBlock>
-            </Card>
-          </Col>
-
-          <Col xs="12" lg="6">
-            <Card>
-              <CardHeader>
-                <i className="fa fa-align-justify"></i> Striped Table
+                <i className="fa fa-align-justify"></i> Users
               </CardHeader>
               <CardBlock className="card-body">
                 <Table responsive striped>
                   <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Date registered</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                  </tr>
+                    <tr>
+                      <th></th>
+                      <th>Email</th>
+                      <th>Display Name</th>
+                      <th>Child Name</th>
+                      <th>Tokens earned</th>
+                    </tr>
                   </thead>
                   <tbody>
-                  <tr>
-                    <td>Yiorgos Avraamu</td>
-                    <td>2012/01/01</td>
-                    <td>Member</td>
-                    <td>
-                      <Badge color="success">Active</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Avram Tarasios</td>
-                    <td>2012/02/01</td>
-                    <td>Staff</td>
-                    <td>
-                      <Badge color="danger">Banned</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Quintin Ed</td>
-                    <td>2012/02/01</td>
-                    <td>Admin</td>
-                    <td>
-                      <Badge color="secondary">Inactive</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Enéas Kwadwo</td>
-                    <td>2012/03/01</td>
-                    <td>Member</td>
-                    <td>
-                      <Badge color="warning">Pending</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Agapetus Tadeáš</td>
-                    <td>2012/01/21</td>
-                    <td>Staff</td>
-                    <td>
-                      <Badge color="success">Active</Badge>
-                    </td>
-                  </tr>
+                    {this.renderUserRow()}
                   </tbody>
                 </Table>
                 <Pagination>
@@ -168,230 +101,6 @@ class Tables extends Component {
                   <PaginationItem><PaginationLink href="#">4</PaginationLink></PaginationItem>
                   <PaginationItem><PaginationLink next href="#">Next</PaginationLink></PaginationItem>
                 </Pagination>
-              </CardBlock>
-            </Card>
-          </Col>
-        </Row>
-
-        <Row>
-
-          <Col xs="12" lg="6">
-            <Card>
-              <CardHeader>
-                <i className="fa fa-align-justify"></i> Condensed Table
-              </CardHeader>
-              <CardBlock className="card-body">
-                <Table responsive size="sm">
-                  <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Date registered</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr>
-                    <td>Carwyn Fachtna</td>
-                    <td>2012/01/01</td>
-                    <td>Member</td>
-                    <td>
-                      <Badge color="success">Active</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Nehemiah Tatius</td>
-                    <td>2012/02/01</td>
-                    <td>Staff</td>
-                    <td>
-                      <Badge color="danger">Banned</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Ebbe Gemariah</td>
-                    <td>2012/02/01</td>
-                    <td>Admin</td>
-                    <td>
-                      <Badge color="secondary">Inactive</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Eustorgios Amulius</td>
-                    <td>2012/03/01</td>
-                    <td>Member</td>
-                    <td>
-                      <Badge color="warning">Pending</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Leopold Gáspár</td>
-                    <td>2012/01/21</td>
-                    <td>Staff</td>
-                    <td>
-                      <Badge color="success">Active</Badge>
-                    </td>
-                  </tr>
-                  </tbody>
-                </Table>
-                <Pagination>
-                  <PaginationItem><PaginationLink previous href="#">Prev</PaginationLink></PaginationItem>
-                  <PaginationItem active>
-                    <PaginationLink href="#">1</PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem><PaginationLink href="#">2</PaginationLink></PaginationItem>
-                  <PaginationItem><PaginationLink href="#">3</PaginationLink></PaginationItem>
-                  <PaginationItem><PaginationLink href="#">4</PaginationLink></PaginationItem>
-                  <PaginationItem><PaginationLink next href="#">Next</PaginationLink></PaginationItem>
-                </Pagination>
-              </CardBlock>
-            </Card>
-          </Col>
-
-          <Col xs="12" lg="6">
-            <Card>
-              <CardHeader>
-                <i className="fa fa-align-justify"></i> Bordered Table
-              </CardHeader>
-              <CardBlock className="card-body">
-                <Table responsive bordered>
-                  <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Date registered</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr>
-                    <td>Pompeius René</td>
-                    <td>2012/01/01</td>
-                    <td>Member</td>
-                    <td>
-                      <Badge color="success">Active</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Paĉjo Jadon</td>
-                    <td>2012/02/01</td>
-                    <td>Staff</td>
-                    <td>
-                      <Badge color="danger">Banned</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Micheal Mercurius</td>
-                    <td>2012/02/01</td>
-                    <td>Admin</td>
-                    <td>
-                      <Badge color="secondary">Inactive</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Ganesha Dubhghall</td>
-                    <td>2012/03/01</td>
-                    <td>Member</td>
-                    <td>
-                      <Badge color="warning">Pending</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Hiroto Šimun</td>
-                    <td>2012/01/21</td>
-                    <td>Staff</td>
-                    <td>
-                      <Badge color="success">Active</Badge>
-                    </td>
-                  </tr>
-                  </tbody>
-                </Table>
-                <Pagination>
-                  <PaginationItem><PaginationLink previous href="#">Prev</PaginationLink></PaginationItem>
-                  <PaginationItem active>
-                    <PaginationLink href="#">1</PaginationLink>
-                  </PaginationItem>
-                  <lPaginationItemi className="page-item"><PaginationLink href="#">2</PaginationLink></lPaginationItemi>
-                  <PaginationItem><PaginationLink href="#">3</PaginationLink></PaginationItem>
-                  <PaginationItem><PaginationLink href="#">4</PaginationLink></PaginationItem>
-                  <PaginationItem><PaginationLink next href="#">Next</PaginationLink></PaginationItem>
-                </Pagination>
-              </CardBlock>
-            </Card>
-          </Col>
-
-        </Row>
-
-        <Row>
-          <Col>
-            <Card>
-              <CardHeader>
-                <i className="fa fa-align-justify"></i> Combined All Table
-              </CardHeader>
-              <CardBlock className="card-body">
-                <Table hover bordered striped responsive size="sm">
-                  <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Date registered</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr>
-                    <td>Vishnu Serghei</td>
-                    <td>2012/01/01</td>
-                    <td>Member</td>
-                    <td>
-                      <Badge color="success">Active</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Zbyněk Phoibos</td>
-                    <td>2012/02/01</td>
-                    <td>Staff</td>
-                    <td>
-                      <Badge color="danger">Banned</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Einar Randall</td>
-                    <td>2012/02/01</td>
-                    <td>Admin</td>
-                    <td>
-                      <Badge color="secondary">Inactive</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Félix Troels</td>
-                    <td>2012/03/01</td>
-                    <td>Member</td>
-                    <td>
-                      <Badge color="warning">Pending</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Aulus Agmundr</td>
-                    <td>2012/01/21</td>
-                    <td>Staff</td>
-                    <td>
-                      <Badge color="success">Active</Badge>
-                    </td>
-                  </tr>
-                  </tbody>
-                </Table>
-                <nav>
-                  <Pagination>
-                    <PaginationItem><PaginationLink previous href="#">Prev</PaginationLink></PaginationItem>
-                    <PaginationItem active>
-                      <PaginationLink href="#">1</PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem><PaginationLink href="#">2</PaginationLink></PaginationItem>
-                    <PaginationItem><PaginationLink href="#">3</PaginationLink></PaginationItem>
-                    <PaginationItem><PaginationLink href="#">4</PaginationLink></PaginationItem>
-                    <PaginationItem><PaginationLink next href="#">Next</PaginationLink></PaginationItem>
-                  </Pagination>
-                </nav>
               </CardBlock>
             </Card>
           </Col>

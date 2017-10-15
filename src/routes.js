@@ -1,7 +1,7 @@
 const routes = {
   '/': 'Home',
   '/dashboard': 'Dashboard',
-  '/components': 'Components',
+  '/users': 'Users',
   '/charts': 'Charts',
   '/components/buttons': 'Buttons',
   '/components/social-buttons': 'Social Buttons',
