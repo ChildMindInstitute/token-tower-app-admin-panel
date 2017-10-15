@@ -14,7 +14,7 @@ import {
 import { database } from 'firebase';
 
 
-class Tables extends Component {
+class Users extends Component {
   constructor() {
     super();
     this.onUserChange = this.onUserChange.bind(this);
@@ -49,7 +49,7 @@ class Tables extends Component {
           tokensEarned: (childName ? childTokensEarned : parentTokensEarned) + tokens.length
         });
       })
-      .then(() => this.forceUpdate())
+        .then(() => this.forceUpdate())
     });
   }
 
@@ -91,16 +91,18 @@ class Tables extends Component {
                     {this.renderUserRow()}
                   </tbody>
                 </Table>
-                <Pagination>
-                  <PaginationItem disabled><PaginationLink previous href="#">Prev</PaginationLink></PaginationItem>
-                  <PaginationItem active>
-                    <PaginationLink href="#">1</PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem><PaginationLink href="#">2</PaginationLink></PaginationItem>
-                  <PaginationItem><PaginationLink href="#">3</PaginationLink></PaginationItem>
-                  <PaginationItem><PaginationLink href="#">4</PaginationLink></PaginationItem>
-                  <PaginationItem><PaginationLink next href="#">Next</PaginationLink></PaginationItem>
-                </Pagination>
+                {
+                  // <Pagination>
+                  //   <PaginationItem disabled><PaginationLink previous href="#">Prev</PaginationLink></PaginationItem>
+                  //   <PaginationItem active>
+                  //     <PaginationLink href="#">1</PaginationLink>
+                  //   </PaginationItem>
+                  //   <PaginationItem><PaginationLink href="#">2</PaginationLink></PaginationItem>
+                  //   <PaginationItem><PaginationLink href="#">3</PaginationLink></PaginationItem>
+                  //   <PaginationItem><PaginationLink href="#">4</PaginationLink></PaginationItem>
+                  //   <PaginationItem><PaginationLink next href="#">Next</PaginationLink></PaginationItem>
+                  // </Pagination>
+                }
               </CardBlock>
             </Card>
           </Col>
@@ -111,4 +113,4 @@ class Tables extends Component {
   }
 }
 
-export default Tables;
+export default Users;

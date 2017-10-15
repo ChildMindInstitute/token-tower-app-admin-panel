@@ -19,7 +19,7 @@ import {
   brandDanger, brandInfo, convertHex, dailyLabel, initChartData, mainChartOpts, monthlyLabel, weeklyLabel
 } from '../../utils';
 
-class Charts extends Component {
+class UserChart extends Component {
   constructor(props) {
     super(props);
 
@@ -185,4 +185,4 @@ class Charts extends Component {
   }
 }
 
-export default Charts;
+export default UserChart;
