@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import { Container, Row, Col, CardGroup, Card, CardBlock, Button, Input, InputGroup, InputGroupAddon } from "reactstrap";
-import { auth } from 'firebase';
+import { auth, database } from 'firebase';
 
 class Login extends Component {
   constructor() {
@@ -18,16 +18,14 @@ class Login extends Component {
   onLogin() {
     const { username, password } = this.state;
     const { history } = this.props;
-    if (username === 'childmind@yopmail.com' && password === 'childmind') {
-      auth().signInWithEmailAndPassword(username, password)
-        .then(() => {
-          history.push(('/'));
-        })
-        .catch(() => {
-          alert('username or password incorrect')
-        });
-    }
-    else alert('username or password incorrect')
+    auth().signInWithEmailAndPassword(username, password)
+      .then(({ uid }) => database().ref(`users/${uid}`).once('value'))
+      .then((snap) => {
+        const { isAdmin } = snap.val();
+        if (isAdmin) history.push(('/'));
+        else throw new Error();
+      })
+      .catch(() => alert('username or password incorrect'));
   }
 
   onUsernamChange({ target: { value } }) {
