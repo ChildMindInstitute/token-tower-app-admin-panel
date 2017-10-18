@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-import { Bar, Line } from "react-chartjs-2";
 import {
   Row,
   Col,
@@ -8,6 +7,7 @@ import {
   CardBlock,
   CardFooter,
   CardTitle,
+  Button,
   ButtonToolbar,
   ButtonGroup,
   Label,
@@ -15,6 +15,9 @@ import {
 } from "reactstrap";
 import { database } from 'firebase';
 import moment from 'moment'
+import { BarChart, Bar, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'Recharts';
+import { CSVLink, CSVDownload } from 'react-csv';
+
 import {
   brandDanger, brandInfo, convertHex, dailyLabel, initChartData, mainChartOpts, monthlyLabel, weeklyLabel
 } from '../../utils';
@@ -25,17 +28,24 @@ class Dashboard extends Component {
 
     this.renderFilterType = this.renderFilterType.bind(this);
     this.onTokenHistoryChanged = this.onTokenHistoryChanged.bind(this);
-    this.getChartData = this.getChartData.bind(this);
     this.getChartItemIndex = this.getChartItemIndex.bind(this);
     this.onFilterClick = this.onFilterClick.bind(this);
     this.getTotalAddToken = this.getTotalAddToken.bind(this);
     this.getTotalRemoveToken = this.getTotalRemoveToken.bind(this);
+    this.getTotalEarnToken = this.getTotalEarnToken.bind(this);
 
-    this.addTokenActivities = [];
-    this.removeTokenActivities = [];
+    this.initData = this.initData.bind(this)
 
     this.filterTypes = ['Day', 'Week', 'Month']
     this.state = { filterType: 'Day' };
+
+    this.data = [];
+  }
+
+  initData() {
+    const { state: { filterType } } = this;
+    const filter = filterType === 'Day' ? dailyLabel : filterType === 'Week' ? weeklyLabel : monthlyLabel;
+    return filter.map(item => ({ name: item, removed: 0, earned: 0, added: 0 }));
   }
 
   componentWillMount() {
@@ -52,15 +62,16 @@ class Dashboard extends Component {
     database().ref('tokenHistory').off('value', this.onTokenHistoryChanged);
   }
 
-  getChartData() {
-    const { state: { filterType }, addTokenActivities, removeTokenActivities } = this;
+  getTotalAddToken() {
+    return this.data.length > 0 && this.data.reduce((a, b = 0) => a + b.added, 0);
+  }
 
-    return initChartData(
-      [...addTokenActivities],
-      [...removeTokenActivities],
-      [],
-      filterType === 'Day' ? dailyLabel : filterType === 'Week' ? weeklyLabel : monthlyLabel
-    );
+  getTotalRemoveToken() {
+    return this.data.length > 0 && this.data.reduce((a, b = 0) => a + b.removed, 0);
+  }
+
+  getTotalEarnToken() {
+    return this.data.length > 0 && this.data.reduce((a, b = 0) => a + b.added + b.removed, 0);
   }
 
   getChartItemIndex(timeStamp) {
@@ -73,20 +84,11 @@ class Dashboard extends Component {
     this.setState({ filterType: type });
   }
 
-  getTotalAddToken() {
-    return this.addTokenActivities.length > 0 && this.addTokenActivities.reduce((a, b) => a + b);
-  }
-
-  getTotalRemoveToken() {
-    return this.removeTokenActivities.length > 0 && this.removeTokenActivities.reduce((a, b) => a + b);
-  }
-
   onTokenHistoryChanged(parentSnapshot) {
-    this.addTokenActivities = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    this.removeTokenActivities = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    this.data = this.initData();
 
     parentSnapshot.forEach((parent) => {
-      const { state: { filterType }, addTokenActivities, removeTokenActivities, getChartItemIndex } = this;
+      const { state: { filterType }, getChartItemIndex } = this;
       const condition = filterType === 'Day' ? 'd' : filterType === 'Week' ? 'w' : 'M';
       const startAt = moment().startOf(condition).format('x') * 1;
       const endAt = moment().endOf(condition).format('x') * 1;
@@ -96,8 +98,14 @@ class Dashboard extends Component {
           child.forEach((snap) => {
             const { type, timeStamp } = snap.val();
             const index = getChartItemIndex(timeStamp);
-            const activies = (type === 'add' ? addTokenActivities : removeTokenActivities);
-            activies[index] += 1;
+            const dataItem = this.data[index];
+            if (type === 'add') {
+              dataItem.added += 1;
+            }
+            else {
+              dataItem.removed -= 1;
+            }
+            dataItem.earned = dataItem.added + dataItem.removed;
           });
         })
         .then(() => { this.forceUpdate() });
@@ -129,30 +137,48 @@ class Dashboard extends Component {
               <CardBlock className="card-body">
                 <Row>
                   <Col sm="5">
-                    <CardTitle className="mb-0">User activies</CardTitle>
+                    <CardTitle className="mb-0">Total user tokens</CardTitle>
                     <div className="small text-muted">{moment().format('MMMM Do YYYY')}</div>
                   </Col>
                   <Col sm="7" className="d-none d-sm-inline-block">
+                    <CSVLink data={this.data} filename={"my-csv-file.csv"}>
+                      <Button color="primary" className="float-right"><i className="icon-cloud-download"></i></Button>
+                    </CSVLink>
                     <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
                       {this.renderFilterType()}
                     </ButtonToolbar>
                   </Col>
                 </Row>
                 <div className="chart-wrapper" style={{ height: 300 + 'px', marginTop: 40 + 'px' }}>
-                  <Line data={this.getChartData()} options={mainChartOpts} height={300} />
+                  <BarChart width={1000} height={300} data={this.data} stackOffset="sign" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <Tooltip />
+                    <Legend />
+                    <ReferenceLine y={0} stroke='#000' />
+                    <Bar dataKey="removed" fill="red" stackId="stack" name="tokens removed" />
+                    <Bar dataKey="added" fill="blue" stackId="stack" name="token added" />
+                    <Bar dataKey="earned" fill="green" name="tokens earned" />
+                  </BarChart>
                 </div>
               </CardBlock>
               <CardFooter>
                 <ul>
                   <li>
                     <div className="text-muted">Total tokens added</div>
-                    <strong>{this.getTotalAddToken()} times</strong>
-                    <Progress className="progress-xs mt-2" color="info" value="100" />
+                    <strong>{this.getTotalAddToken()} tokens</strong>
+                    <Progress className="progress-xs mt-2" color="primary" value="100" />
                   </li>
                   <li className="d-none d-md-table-cell">
                     <div className="text-muted">Total tokens removed</div>
-                    <strong>{this.getTotalRemoveToken()} times</strong>
+                    <strong>{this.getTotalRemoveToken()} tokens</strong>
                     <Progress className="progress-xs mt-2" color="danger" value="100" />
+                  </li>
+                  <li className="d-none d-md-table-cell">
+                    <div className="text-muted">Total tokens earned</div>
+                    <strong>{this.getTotalEarnToken()} tokens</strong>
+                    <Progress className="progress-xs mt-2" color="success" value="100" />
                   </li>
                 </ul>
               </CardFooter>

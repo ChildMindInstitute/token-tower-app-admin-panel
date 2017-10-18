@@ -23,36 +23,6 @@ export const monthlyLabel = [
   '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31',
 ];
 
-export const initChartData = (addTokenActivities, removeTokenActivities, tokensEarned, label) => ({
-  labels: label,
-  datasets: [
-    {
-      label: 'Add tokens',
-      backgroundColor: convertHex(brandInfo, 10),
-      borderColor: brandInfo,
-      pointHoverBackgroundColor: '#fff',
-      borderWidth: 2,
-      data: addTokenActivities
-    },
-    {
-      label: 'Remove tokens',
-      backgroundColor: 'transparent', // convertHex(brandDanger, 10),
-      borderColor: brandDanger,
-      pointHoverBackgroundColor: '#fff',
-      borderWidth: 2,
-      data: removeTokenActivities
-    },
-    {
-      label: 'Tokens earned average',
-      backgroundColor: convertHex(brandWarning, 10),
-      borderColor: brandWarning,
-      pointHoverBackgroundColor: '#fff',
-      borderWidth: 2,
-      data: tokensEarned
-    },
-  ]
-})
-
 export const mainChartOpts = {
   maintainAspectRatio: false,
   legend: {

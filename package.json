@@ -35,10 +35,12 @@
     "moment": "^2.19.1",
     "react": "^15.6.1",
     "react-chartjs-2": "2.6.1",
+    "react-csv": "^1.0.8",
     "react-dom": "^15.6.1",
     "react-router-dom": "4.2.2",
     "react-transition-group": "^1.2.0",
     "reactstrap": "^4.8.0",
+    "recharts": "^1.0.0-alpha.6",
     "simple-line-icons": "^2.4.1"
   },
   "scripts": {
