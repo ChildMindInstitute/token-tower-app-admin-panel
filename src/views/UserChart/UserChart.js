@@ -17,6 +17,8 @@ import { database } from 'firebase';
 import moment from 'moment'
 import { BarChart, Bar, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'Recharts';
 import { CSVLink, CSVDownload } from 'react-csv';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 import {
   brandDanger, brandInfo, convertHex, dailyLabel, initChartData, mainChartOpts, monthlyLabel, weeklyLabel
@@ -36,6 +38,10 @@ class UserChart extends Component {
     this.onUserChanged = this.onUserChanged.bind(this);
     this.initData = this.initData.bind(this)
 
+    this.handleChangeStart = this.handleChangeStart.bind(this);
+    this.validateDateChange = this.validateDateChange.bind(this);
+    this.handleChangeEnd = this.handleChangeEnd.bind(this);
+
     this.filterTypes = ['Day', 'Week', 'Month']
     this.state = { filterType: 'Day' };
 
@@ -43,7 +49,11 @@ class UserChart extends Component {
   }
 
   initData() {
-    const { state: { filterType } } = this;
+    const { isDateChange, state: { filterType, startDate, endDate } } = this;
+    if (isDateChange) {
+      return [{ name: `From ${startDate.format('MMMM Do YYYY')} to ${endDate.format('MMMM Do YYYY')}`, removed: 0, earned: 0, added: 0 }]
+    }
+
     const filter = filterType === 'Day' ? dailyLabel : filterType === 'Week' ? weeklyLabel : monthlyLabel;
     return filter.map(item => ({ name: item, removed: 0, earned: 0, added: 0 }));
   }
@@ -55,7 +65,13 @@ class UserChart extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (this.state.filterType !== prevState.filterType) {
+    const { filterType, startDate, endDate } = this.state;
+    const isFilterTypeChange = filterType !== prevState.filterType;
+    const isStartDateChange = startDate && !startDate.isSame(prevState.startDate);
+    const isEndDateChange = endDate && !endDate.isSame(prevState.endDate);
+    this.isDateChange = ((isStartDateChange || isEndDateChange) && startDate && endDate);
+
+    if (isFilterTypeChange || this.isDateChange) {
       const { match: { params: { id } } } = this.props;
       database().ref(`tokenHistory/${id}`).once('value', this.onTokenHistoryChanged);
     }
@@ -95,18 +111,27 @@ class UserChart extends Component {
   }
 
   onTokenHistoryChanged(snapshot) {
+    const { isDateChange, state: { startDate, endDate, filterType }, getChartItemIndex } = this;
     this.data = this.initData();
 
-    const { state: { filterType }, getChartItemIndex } = this;
-    const condition = filterType === 'Day' ? 'd' : filterType === 'Week' ? 'w' : 'M';
-    const startAt = moment().startOf(condition).format('x') * 1;
-    const endAt = moment().endOf(condition).format('x') * 1;
+    let startAt;
+    let endAt;
+
+    if (isDateChange) {
+      startAt = moment(startDate).startOf('d').format('x') * 1;
+      endAt = moment(endDate).endOf('d').format('x') * 1;
+    }
+    else {
+      const condition = filterType === 'Day' ? 'd' : filterType === 'Week' ? 'w' : 'M';
+      startAt = moment().startOf(condition).format('x') * 1;
+      endAt = moment().endOf(condition).format('x') * 1;
+    }
 
     snapshot.ref.orderByChild('timeStamp').startAt(startAt).endAt(endAt).once('value')
       .then((child) => {
         child.forEach((snap) => {
           const { type, timeStamp } = snap.val();
-          const index = getChartItemIndex(timeStamp);
+          const index = isDateChange ? 0 : getChartItemIndex(timeStamp);
           const dataItem = this.data[index];
           if (type === 'add') {
             dataItem.added += 1;
@@ -135,6 +160,28 @@ class UserChart extends Component {
       </ButtonGroup>
     )
   }
+
+  validateDateChange(start, end) {
+    if (start && end) {
+      if (start.isAfter(end)) {
+        alert('from must before to')
+        return;
+      }
+      return true;
+    }
+    return true;
+  }
+
+  handleChangeStart(date) {
+    const isValid = this.validateDateChange(date, this.state.endDate)
+    if (isValid) this.setState({ startDate: date });
+  }
+
+  handleChangeEnd(date) {
+    const isValid = this.validateDateChange(this.state.startDate, date)
+    if (isValid) this.setState({ endDate: date });
+  }
+
   render() {
     return (
       <div className="animated fadeIn">
@@ -154,10 +201,29 @@ class UserChart extends Component {
                     <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
                       {this.renderFilterType()}
                     </ButtonToolbar>
+                    <div>
+                      <div className="small text-muted">From</div>
+                      <DatePicker
+                        selected={this.state.startDate}
+                        selectsStart
+                        startDate={this.state.startDate}
+                        endDate={this.state.endDate}
+                        onChange={this.handleChangeStart}
+                      />
+                      <div className="small text-muted">To</div>
+                      <DatePicker
+                        selected={this.state.endDate}
+                        selectsEnd
+                        startDate={this.state.startDate}
+                        endDate={this.state.endDate}
+                        onChange={this.handleChangeEnd}
+                      />
+                    </div>
+
                   </Col>
                 </Row>
-                <div className="chart-wrapper" style={{ height: 300 + 'px', marginTop: 40 + 'px' }}>
-                  <BarChart width={1000} height={300} data={this.data} stackOffset="sign" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <div className="chart-wrapper" style={{ height: 400 + 'px', marginTop: 40 + 'px' }}>
+                  <BarChart width={1000} height={400} data={this.data} stackOffset="sign" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <XAxis dataKey="name" />
                     <YAxis />
                     <CartesianGrid strokeDasharray="3 3" />
