@@ -21,9 +21,9 @@ class Login extends Component {
     auth().signInWithEmailAndPassword(username, password)
       .then(({ uid }) => database().ref(`users/${uid}`).once('value'))
       .then((snap) => {
-        const { isAdmin } = snap.val();
+        const { isAdmin, uid } = snap.val();
         if (isAdmin) history.push(('/'));
-        else throw new Error();
+        else history.push(`user/${uid}`)
       })
       .catch(() => alert('username or password incorrect'));
   }

@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Switch, Route, Redirect } from 'react-router-dom';
 import { Container } from 'reactstrap';
-import { auth } from 'firebase';
+import { auth, database } from 'firebase';
 
 import Header from '../../components/Header/';
 import Sidebar from '../../components/Sidebar/';
@@ -16,7 +16,7 @@ import Users from '../../views/Components/Users/Users';
 class Full extends Component {
   constructor() {
     super();
-
+    this.state = { isAdmin: false }
     this.onAuthStateChanged = this.onAuthStateChanged.bind(this);
   }
 
@@ -27,6 +27,11 @@ class Full extends Component {
   onAuthStateChanged(user) {
     if (!user) {
       this.props.history.push('/login')
+    } else {
+      database().ref(`users/${user.uid}`).once('value').then((snap) => {
+        const { isAdmin } = snap.val();
+        this.setState({ isAdmin })
+      })
     }
   }
 
@@ -35,9 +40,9 @@ class Full extends Component {
       <div className="app">
         <Header />
         <div className="app-body">
-          <Sidebar {...this.props} />
+          <Sidebar {...this.props} isAdmin={this.state.isAdmin} />
           <main className="main">
-            <Breadcrumb />
+            {this.state.isAdmin && <Breadcrumb />}
             <Container fluid>
               <Switch>
                 <Route path="/dashboard" name="Dashboard" component={Dashboard} />

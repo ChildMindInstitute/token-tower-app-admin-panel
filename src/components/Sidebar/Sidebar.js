@@ -95,7 +95,7 @@ class Sidebar extends Component {
       <div className="sidebar">
         <nav className="sidebar-nav">
           <Nav>
-            {navList(nav.items)}
+            {props.isAdmin && navList(nav.items)}
             <NavItem>
               <NavLink to={'/'} className={"nav-link"} activeClassName="active" onClick={onLogout}>
                 <i className={'icon-logout'}></i>Logout
