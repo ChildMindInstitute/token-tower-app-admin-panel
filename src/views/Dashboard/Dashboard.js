@@ -82,7 +82,7 @@ class Dashboard extends Component {
   }
 
   getTotalRemoveToken() {
-    return this.data.length > 0 && this.data.reduce((a, b = 0) => a + b.removed, 0);
+    return this.data.length > 0 && Math.abs(this.data.reduce((a, b = 0) => a + b.removed, 0));
   }
 
   getTotalEarnToken() {
