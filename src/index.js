@@ -24,12 +24,12 @@ import Page500 from './views/Pages/Page500/'
 const history = createBrowserHistory();
 
 initializeApp({
-  apiKey: 'AIzaSyAYdbb_andORrzT7Zxn1CZedsoe3Nq5EuY',
-  authDomain: 'premium-origin-180814.firebaseapp.com',
-  databaseURL: 'https://premium-origin-180814.firebaseio.com',
-  projectId: 'premium-origin-180814',
-  storageBucket: 'premium-origin-180814.appspot.com',
-  messagingSenderId: '936670915515'
+  apiKey: 'AIzaSyD75oo04itTTic2KSkS2_q32_fj9YCke9k',
+  authDomain: 'token-e7f83.firebaseapp.com',
+  databaseURL: 'https://token-e7f83.firebaseio.com',
+  projectId: 'token-e7f83',
+  storageBucket: 'token-e7f83.appspot.com',
+  messagingSenderId: '211351537237'
 });
 
 ReactDOM.render((
