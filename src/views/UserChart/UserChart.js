@@ -106,8 +106,8 @@ class UserChart extends Component {
   }
 
   onUserChanged(childSnapshot) {
-    const { displayName } = childSnapshot.val();
-    this.setState({ displayName })
+    const { displayName, child } = childSnapshot.val();
+    this.setState({ displayName: (child && child.name) || displayName })
   }
 
   onTokenHistoryChanged(snapshot) {
